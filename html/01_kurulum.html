@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauri + Vite + React + Rust İnteraktif Kurulum Rehberi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: "Calm Neutrals" -->
+    <!-- Application Structure Plan: Bu uygulama, karmaşık ve çok adımlı teknik bir rehberi sindirilebilir hale getirmek için tasarlanmıştır. Doğrusal bir doküman yerine, sol tarafta her zaman görünür (sticky) bir gezinme menüsü ve ana içerik alanında kart tabanlı bölümler kullanılmıştır. Bu yapı, geliştiricilerin belirli bir konuya (örneğin, "Otomatik Güncelleme" veya "Hata Ayıklama") anında atlamasına olanak tanır ve genel süreçteki konumlarını kolayca görmelerini sağlar. Kullanıcı akışı, gezinme menüsü aracılığıyla keşfetmeye veya adımları sırayla takip etmeye dayanır. Bu, teknik dokümantasyon için kullanıcı deneyimini önemli ölçüde iyileştiren bir bilgi mimarisi seçimidir. -->
+    <!-- Visualization & Content Choices: Bu rehberin ana içeriği metin ve kod bloklarından oluştuğu için geleneksel veri görselleştirmeleri (grafikler) kullanılmamıştır. Bunun yerine, içerik sunumunu ve etkileşimini geliştirmeye odaklanılmıştır. 1) Bilgi: Kod blokları -> Amaç: Bilgilendirmek -> Sunum Yöntemi: Stilize edilmiş `<pre><code>` blokları -> Etkileşim: Tek tıklamayla "Panoya Kopyala" butonu -> Gerekçe: Geliştiricilerin kodları hatasız ve hızlı bir şekilde almasını sağlayarak süreci kolaylaştırır. 2) Bilgi: Adımlar arası ilişki -> Amaç: Düzenlemek -> Sunum Yöntemi: HTML/CSS ile oluşturulmuş basit akış diyagramı (IPC bölümü için) -> Etkileşim: Statik görsel -> Gerekçe: Frontend ve backend arasındaki veri akışını metinden daha etkili bir şekilde görselleştirir ve NO SVG/Mermaid kuralına uyar. 3) Bilgi: Rehberin yapısı -> Amaç: Düzenlemek -> Sunum Yöntemi: Kenar çubuğu (sidebar) navigasyonu -> Etkileşim: Tıklandığında ilgili bölüme pürüzsüz kaydırma ve aktif bölümü vurgulama -> Gerekçe: Uzun bir doküman içinde gezinmeyi basitleştirir ve kullanıcıya kontrol hissi verir. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .active-nav {
+            color: #0d9488;
+            border-left-color: #0d9488;
+            font-weight: 600;
+        }
+        .code-block {
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4a5568;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .code-block:hover .copy-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800">
+<div class="max-w-screen-xl mx-auto p-4 md:p-8">
+    <header class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-teal-700">Tauri + Vite + React + Rust</h1>
+        <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Modern, güvenli ve performanslı masaüstü uygulamaları geliştirmek için kapsamlı ve interaktif kurulum rehberi.</p>
+    </header>
+
+    <div class="flex flex-col md:flex-row gap-8">
+        <nav id="sidebar" class="md:w-1/4 lg:w-1/5 md:sticky top-8 self-start">
+            <ul class="space-y-2">
+                <li><a href="#giris" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Giriş</a></li>
+                <li><a href="#faz1" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Faz 1: Proje Kurulumu</a></li>
+                <li>
+                    <a href="#faz2" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Faz 2: Temel Altyapı</a>
+                    <ul class="pl-6 mt-2 space-y-2 text-sm">
+                        <li><a href="#loglama" class="block text-slate-500 hover:text-teal-600">Loglama</a></li>
+                        <li><a href="#guncelleme" class="block text-slate-500 hover:text-teal-600">Otomatik Güncelleme</a></li>
+                        <li><a href="#iletisim" class="block text-slate-500 hover:text-teal-600">Güvenli İletişim (IPC)</a></li>
+                    </ul>
+                </li>
+                <li><a href="#faz3" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Faz 3: Hata Ayıklama</a></li>
+                <li><a href="#ozet" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Özet ve Sonraki Adımlar</a></li>
+            </ul>
+        </nav>
+
+        <main class="w-full md:w-3/4 lg:w-4/5">
+            <div class="space-y-12">
+                <section id="giris" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Rehbere Hoş Geldiniz</h2>
+                    <p class="text-slate-600 leading-relaxed">Bu interaktif rehber, Tauri, Vite, React ve Rust teknolojilerini kullanarak modern bir masaüstü uygulaması geliştirmek için gereken tüm adımları size sunar. Sol taraftaki menüyü kullanarak adımlar arasında gezinebilir, kod bloklarının sağ üst köşesindeki butonlarla kodları kolayca kopyalayabilir ve projenizi adım adım hayata geçirebilirsiniz. Bu rehber, temel kurulumdan gelişmiş konulara kadar eksiksiz bir yol haritası sağlamak üzere tasarlanmıştır.</p>
+                </section>
+
+                <section id="faz1" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Faz 1: Ön Gereksinimler ve Proje Başlatma</h2>
+                    <p class="text-slate-600 mb-6">Bu ilk aşamada, geliştirme ortamımızı hazırlayacak ve temel proje iskeletini oluşturarak uygulamamıza ilk adımı atacağız. Gerekli araçların sisteminizde kurulu olduğundan emin olun.</p>
+                    <h3 class="text-xl font-semibold mb-3">Sistem Gereksinimleri</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600 mb-6">
+                        <li><b>Rust ve Cargo:</b> Rust programlama dili ve paket yöneticisi.</li>
+                        <li><b>Node.js ve npm/yarn/pnpm:</b> JavaScript çalışma ortamı ve paket yöneticisi.</li>
+                        <li><b>İşletim Sistemine Özel Bağımlılıklar:</b> Windows için C++ build tools, macOS için Xcode vb.</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold mb-3">Yeni Proje Oluşturma</h3>
+                    <p class="text-slate-600 mb-4">Tauri'nin interaktif kurulum aracını kullanarak projemizi başlatalım. Terminalde aşağıdaki komutu çalıştırın ve sihirbazdaki adımları (React - TypeScript seçimiyle) takip edin.</p>
+                    <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                        <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                        <pre><code>npm create tauri-app@latest</code></pre>
+                    </div>
+                </section>
+
+                <section id="faz2" class="scroll-mt-24">
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-teal-700 mb-4">Faz 2: Temel Altyapının Kurulumu</h2>
+                        <p class="text-slate-600 leading-relaxed">Projemizin iskeletini oluşturduktan sonra, uygulamamızı daha profesyonel ve yönetilebilir hale getirecek kritik altyapı bileşenlerini ekleyeceğiz. Bu bölümde loglama, otomatik güncelleme ve frontend-backend iletişimi gibi konuları ele alacağız.</p>
+                    </div>
+
+                    <div id="loglama" class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8 scroll-mt-24">
+                        <h3 class="text-xl font-semibold mb-3">Loglama: `tauri-plugin-log` ile Gelişmiş Kayıt Tutma</h3>
+                        <p class="text-slate-600 mb-4">Uygulamanızdaki olayları ve hataları izlemek için güçlü bir loglama altyapısı kurmak hayati önem taşır. `src-tauri/Cargo.toml` dosyanıza ilgili bağımlılığı ekleyin:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm mb-4">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>[dependencies]
+tauri-plugin-log = { version = "1.3.0", features = ["colored"] }
+log = "0.4.20"</code></pre>
+                        </div>
+                        <p class="text-slate-600 mb-4">Ardından `src-tauri/src/main.rs` dosyasında loglama eklentisini başlatın:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>use tauri_plugin_log::{LogTarget, LoggerBuilder};
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(
+            LoggerBuilder::new()
+                .targets([
+                    LogTarget::LogDir,
+                    LogTarget::Stdout,
+                    LogTarget::Webview,
+                ])
+                .build(),
+        )
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div id="guncelleme" class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8 scroll-mt-24">
+                        <h3 class="text-xl font-semibold mb-3">Otomatik Güncelleme: Uygulamanızı Güncel Tutma</h3>
+                        <p class="text-slate-600 mb-4">Tauri'nin yerleşik güncelleme mekanizması ile kullanıcılara yeni sürümleri kolayca dağıtabilirsiniz. İlk olarak, paketlerinizi imzalamak için bir anahtar çifti oluşturun:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm mb-4">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>npm run tauri signer generate -w ./src-tauri</code></pre>
+                        </div>
+                        <p class="text-slate-600 mb-4">Oluşturulan genel anahtarı (`pubkey`) `src-tauri/tauri.conf.json` dosyasındaki `updater` bölümüne ekleyin:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>"updater": {
+  "active": true,
+  "endpoints": [
+    "https://sizin-sunucunuz.com/updates.json"
+  ],
+  "dialog": true,
+  "pubkey": "GENERATED_PUBLIC_KEY"
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div id="iletisim" class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8 scroll-mt-24">
+                        <h3 class="text-xl font-semibold mb-3">Güvenli İletişim (IPC): React ve Rust Arasında Köprü Kurma</h3>
+                        <p class="text-slate-600 mb-4">Tauri, frontend (React) ve backend (Rust) arasında son derece güvenli bir iletişim kanalı sağlar. Bu, React arayüzünüzden Rust fonksiyonlarını çağırmanıza veya Rust tarafından arayüze anlık olaylar göndermenize olanak tanır.</p>
+                        <div class="my-6 p-4 border rounded-lg bg-stone-50">
+                            <p class="text-center font-semibold text-slate-700 mb-4">IPC Akış Diyagramı</p>
+                            <div class="flex items-center justify-center gap-4 text-sm text-center">
+                                <div class="p-3 bg-blue-100 text-blue-800 rounded-md w-32">
+                                    <strong>React Frontend</strong><br/>(Kullanıcı Arayüzü)
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <span class="font-semibold text-teal-700">invoke ▶</span>
+                                    <span class="text-xs text-slate-500">(Komut Çağırma)</span>
+                                    <hr class="w-16 border-slate-300 my-1"/>
+                                    <span class="font-semibold text-purple-700">◀ emit</span>
+                                    <span class="text-xs text-slate-500">(Olay Yayma)</span>
+                                </div>
+                                <div class="p-3 bg-orange-100 text-orange-800 rounded-md w-32">
+                                    <strong>Rust Backend</strong><br/>(Ana Mantık)
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-slate-600 mb-4"><b>React'ten Rust'ı Çağırma:</b> Rust tarafında `#[tauri::command]` ile bir fonksiyon tanımlayın ve React'ten `invoke` ile çağırın.</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>// Rust (main.rs)
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Merhaba, {}!", name)
+}
+
+// React (App.tsx)
+import { invoke } from '@tauri-apps/api/tauri';
+const response: string = await invoke('greet', { name: 'React' });</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="faz3" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Faz 3: JetBrains IDE'leri ile Hata Ayıklama</h2>
+                    <p class="text-slate-600 mb-6">Verimli bir geliştirme süreci için hem frontend (React) hem de backend (Rust) kodunu rahatça ayıklayabilmek (debug) kritiktir. WebStorm ve RustRover için hata ayıklama konfigürasyonlarını aşağıda bulabilirsiniz.</p>
+                    <h3 class="text-xl font-semibold mb-3">WebStorm (Frontend)</h3>
+                    <p class="text-slate-600 mb-4">"JavaScript Debug" konfigürasyonu oluşturun ve URL olarak Vite'ın çalıştığı adresi (genellikle `http://localhost:1420`) belirtin. Artık `.tsx` dosyalarına breakpoint koyabilirsiniz.</p>
+                    <h3 class="text-xl font-semibold mb-3">RustRover (Backend)</h3>
+                    <p class="text-slate-600 mb-4">"Cargo Command" konfigürasyonu oluşturun. `Command` alanına `tauri`, `Additional arguments` alanına ise `dev` yazın. Bu sayede `.rs` dosyalarınıza breakpoint koyarak backend'i adım adım izleyebilirsiniz.</p>
+                </section>
+
+                <section id="ozet" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Özet ve Sonraki Adımlar</h2>
+                    <p class="text-slate-600 leading-relaxed">Tebrikler! Bu rehberi takip ederek, Tauri, Vite, React ve Rust ile sağlam bir temel üzerine kurulu, ölçeklenebilir bir masaüstü uygulaması projesi başlattınız. Artık elinizde çalışan bir proje iskeleti, detaylı loglama altyapısı, otomatik güncelleme mekanizması, güvenli bir iletişim kanalı ve profesyonel bir hata ayıklama ortamı var. Bundan sonraki adımlarınız, uygulamanızın özel mantığını ve arayüzünü geliştirmeye odaklanmak olacaktır. Başarılar!</p>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sections = document.querySelectorAll('main section[id], main div[id]');
+        const navLinks = document.querySelectorAll('#sidebar a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    navLinks.forEach(link => {
+                        link.classList.remove('active-nav');
+                        if (link.getAttribute('href') === `#${id}` || (link.getAttribute('href') ==='#faz2' && ['loglama', 'guncelleme', 'iletisim'].includes(id))) {
+                            link.classList.add('active-nav');
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-30% 0px -70% 0px' });
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+
+        const copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const codeBlock = button.parentElement;
+                const code = codeBlock.querySelector('pre code').innerText;
+
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    button.textContent = 'Kopyalandı!';
+                    setTimeout(() => {
+                        button.textContent = 'Kopyala';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Kopyalama başarısız oldu', err);
+                    button.textContent = 'Hata!';
+                }
+                document.body.removeChild(textarea);
+            });
+        });
+    });
+</script>
+</body>
+</html>

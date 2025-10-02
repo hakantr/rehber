@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rehber Dokümantasyon</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 2rem;
+            }
+        }
+
+        .layout {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .layout {
+                flex-direction: row;
+            }
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 25%;
+                position: sticky;
+                top: 2rem;
+                align-self: flex-start;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                width: 20%;
+            }
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0d9488;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Accordion Styles */
+        .accordion-button {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .accordion-button:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .accordion-button.active {
+            background-color: #0d9488;
+            color: white;
+            border-color: #0d9488;
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding-left: 1rem;
+        }
+
+        .accordion-content.active {
+            max-height: 1000px;
+            margin-bottom: 1rem;
+        }
+
+        .section-link {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .section-link:hover {
+            background-color: #f0fdfa;
+            color: #0d9488;
+        }
+
+        .section-link.active {
+            background-color: #ccfbf1;
+            color: #0d9488;
+            font-weight: 600;
+        }
+
+        .arrow {
+            transition: transform 0.3s;
+            display: inline-block;
+        }
+
+        .arrow.rotate {
+            transform: rotate(90deg);
+        }
+
+        /* Content Styles */
+        .content {
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .content {
+                width: 75%;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .content {
+                width: 80%;
+            }
+        }
+
+        .content-frame {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .error-message {
+            color: #ef4444;
+            padding: 1rem;
+            background-color: #fee2e2;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        /* Hide scrollbar for iframe in webkit browsers */
+        .content-frame::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <h1>Dokümantasyon</h1>
+            <div id="menu-container"></div>
+        </nav>
+
+        <!-- Content -->
+        <main class="content">
+            <iframe id="content-frame" class="content-frame" src=""></iframe>
+        </main>
+    </div>
+</div>
+
+<script>
+    // Dosya listesi - files.json yerine doğrudan burada tanımlı
+    const FILES_CONFIG = {
+        files: [
+            "01_kurulum.html",
+            "02_action.html"
+        ]
+    };
+
+    // Sayfa yüklendiğinde çalışacak
+    document.addEventListener('DOMContentLoaded', async function() {
+        const menuContainer = document.getElementById('menu-container');
+        const contentFrame = document.getElementById('content-frame');
+
+        try {
+            // Dosya listesini al
+            const files = await fetchHtmlFiles();
+
+            // Dosyaları sırala
+            const sortedFiles = files.sort((a, b) => {
+                const numA = parseInt(a.match(/^(\d+)/)?.[1] || '0');
+                const numB = parseInt(b.match(/^(\d+)/)?.[1] || '0');
+                return numA - numB;
+            });
+
+            // Her dosya için menü oluştur
+            for (const file of sortedFiles) {
+                await createMenuItem(file, menuContainer, contentFrame);
+            }
+
+            // İlk dosyayı otomatik yükle
+            if (sortedFiles.length > 0) {
+                loadPageInFrame(sortedFiles[0], contentFrame);
+            }
+
+        } catch (error) {
+            console.error('Dosyalar yüklenirken hata oluştu:', error);
+            menuContainer.innerHTML = '<div class="error-message">Dosyalar yüklenemedi. Lütfen bir web sunucusu kullanarak açın.</div>';
+        }
+    });
+
+    // HTML dosyalarını al
+    async function fetchHtmlFiles() {
+        try {
+            // Önce files.json'dan okumayı dene
+            const response = await fetch('files.json');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('files.json\'dan yüklendi:', data.files);
+                return data.files || [];
+            }
+        } catch (error) {
+            console.warn('files.json okunamadı, yerleşik yapılandırma kullanılıyor:', error);
+        }
+
+        // files.json okunamazsa yerleşik yapılandırmayı kullan
+        console.log('Yerleşik yapılandırma kullanılıyor:', FILES_CONFIG.files);
+        return FILES_CONFIG.files;
+    }
+
+    // Sayfayı iframe'e yükle ve sidebar'ı gizle
+    function loadPageInFrame(fileName, iframe) {
+        // Dosyayı yükle
+        fetch(fileName)
+            .then(response => response.text())
+            .then(html => {
+                // HTML'i parse et
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Sidebar ve nav elementlerini kaldır
+                const sidebar = doc.querySelector('#sidebar, nav, aside');
+                if (sidebar) {
+                    sidebar.remove();
+                }
+
+                // Main içeriği tam genişliğe ayarla
+                const main = doc.querySelector('main');
+                if (main) {
+                    main.style.width = '100%';
+                    main.style.maxWidth = '100%';
+                    main.style.marginLeft = '0';
+                }
+
+                // Flex container'ı düzelt
+                const flexContainer = doc.querySelector('.flex');
+                if (flexContainer) {
+                    flexContainer.style.display = 'block';
+                }
+
+                // Düzenlenmiş HTML'i iframe'e yaz
+                const newHtml = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+
+                // Iframe'e yaz
+                iframe.srcdoc = newHtml;
+            })
+            .catch(error => {
+                console.error(`${fileName} yüklenemedi:`, error);
+                iframe.srcdoc = `<div style="padding: 2rem; color: #ef4444;">Sayfa yüklenemedi: ${fileName}</div>`;
+            });
+    }
+
+    // Menü öğesi oluştur
+    async function createMenuItem(fileName, container, iframe) {
+        try {
+            // Dosya içeriğini yükle
+            const response = await fetch(fileName);
+            if (!response.ok) {
+                throw new Error(`${fileName} yüklenemedi`);
+            }
+            const html = await response.text();
+
+            // DOM parser ile parse et
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Sayfa başlığını al
+            const pageTitle = doc.querySelector('title')?.textContent ||
+                doc.querySelector('h1')?.textContent ||
+                fileName;
+
+            // İçindeki section'ları bul
+            const sections = extractSections(doc);
+
+            // Accordion yapısını oluştur
+            const accordionId = `accordion-${fileName.replace(/[^a-z0-9]/gi, '-')}`;
+
+            const accordionButton = document.createElement('button');
+            accordionButton.className = 'accordion-button';
+            accordionButton.innerHTML = `
+                    <span>${pageTitle}</span>
+                    <span class="arrow">▶</span>
+                `;
+
+            const accordionContent = document.createElement('div');
+            accordionContent.className = 'accordion-content';
+            accordionContent.id = accordionId;
+
+            // Bölümleri ekle
+            sections.forEach(section => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'section-link';
+                link.textContent = section.title;
+                link.onclick = (e) => {
+                    e.preventDefault();
+
+                    // Sayfayı yükle ve bölüme git
+                    fetch(fileName)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+
+                            // Sidebar'ı kaldır
+                            const sidebar = doc.querySelector('#sidebar, nav, aside');
+                            if (sidebar) {
+                                sidebar.remove();
+                            }
+
+                            // Main içeriği düzenle
+                            const main = doc.querySelector('main');
+                            if (main) {
+                                main.style.width = '100%';
+                                main.style.maxWidth = '100%';
+                                main.style.marginLeft = '0';
+                            }
+
+                            const flexContainer = doc.querySelector('.flex');
+                            if (flexContainer) {
+                                flexContainer.style.display = 'block';
+                            }
+
+                            // Script ekle - bölüme kaydırma için
+                            const script = doc.createElement('script');
+                            script.textContent = `
+                                    window.addEventListener('load', function() {
+                                        const element = document.getElementById('${section.id}');
+                                        if (element) {
+                                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }
+                                    });
+                                `;
+                            doc.body.appendChild(script);
+
+                            const newHtml = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+                            iframe.srcdoc = newHtml;
+                        });
+
+                    // Aktif link'i işaretle
+                    document.querySelectorAll('.section-link').forEach(l => {
+                        l.classList.remove('active');
+                    });
+                    link.classList.add('active');
+                };
+                accordionContent.appendChild(link);
+            });
+
+            // Accordion toggle
+            accordionButton.onclick = (e) => {
+                e.stopPropagation();
+                const isActive = accordionContent.classList.contains('active');
+
+                // Tüm accordion'ları kapat
+                document.querySelectorAll('.accordion-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.querySelectorAll('.accordion-button .arrow').forEach(arrow => {
+                    arrow.classList.remove('rotate');
+                });
+                document.querySelectorAll('.accordion-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Section linklerini pasif yap
+                document.querySelectorAll('.section-link').forEach(l => {
+                    l.classList.remove('active');
+                });
+
+                // Tıklanan accordion'ı aç/kapat
+                if (!isActive) {
+                    accordionContent.classList.add('active');
+                    accordionButton.querySelector('.arrow').classList.add('rotate');
+                    accordionButton.classList.add('active');
+                    loadPageInFrame(fileName, iframe);
+                }
+            };
+
+            container.appendChild(accordionButton);
+            container.appendChild(accordionContent);
+
+        } catch (error) {
+            console.error(`${fileName} yüklenirken hata:`, error);
+        }
+    }
+
+    // Sayfa içindeki bölümleri çıkar
+    function extractSections(doc) {
+        const sections = [];
+
+        // section elementlerini bul
+        const sectionElements = doc.querySelectorAll('section[id], div[id]');
+
+        sectionElements.forEach(section => {
+            const id = section.getAttribute('id');
+            if (id) {
+                // Bölüm başlığını bul
+                const heading = section.querySelector('h1, h2, h3');
+                const title = heading?.textContent || id;
+
+                sections.push({
+                    id: id,
+                    title: title
+                });
+            }
+        });
+
+        // Alternatif: nav menüsündeki linkleri kullan
+        if (sections.length === 0) {
+            const navLinks = doc.querySelectorAll('#sidebar a[href^="#"], nav a[href^="#"], #desktop-nav a[href^="#"]');
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    sections.push({
+                        id: href.substring(1),
+                        title: link.textContent.trim()
+                    });
+                }
+            });
+        }
+
+        return sections;
+    }
+</script>
+</body>
+</html>

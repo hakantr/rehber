@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tauri için Kapsamlı GitHub Actions Rehberi</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .active-nav {
+            color: #0d9488;
+            border-left-color: #0d9488;
+            font-weight: 600;
+        }
+        .code-block {
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4a5568;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .code-block:hover .copy-btn {
+            opacity: 1;
+        }
+        .flowchart-node {
+            border: 2px solid #e2e8f0;
+            background-color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .flowchart-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 2rem;
+            margin: 0 0.5rem;
+        }
+        details summary {
+            cursor: pointer;
+            list-style: none;
+        }
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary .arrow {
+            transform: rotate(90deg);
+        }
+        .arrow {
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-50 text-slate-800">
+<div class="max-w-screen-xl mx-auto p-4 md:p-8">
+    <header class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-teal-700">GitHub Actions ile Tauri CI/CD</h1>
+        <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">Tauri projeleriniz için otomatik derleme, test ve yayınlama süreçlerini kurmak için kapsamlı rehber.</p>
+    </header>
+
+    <div class="flex flex-col md:flex-row gap-8">
+        <nav id="sidebar" class="md:w-1/4 lg:w-1/5 md:sticky top-8 self-start">
+            <ul class="space-y-2">
+                <li><a href="#introduction" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Giriş</a></li>
+                <li><a href="#basic-setup" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Temel Kurulum</a></li>
+                <li><a href="#workflow-details" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">İş Akışı Detayları</a></li>
+                <li><a href="#advanced-scenarios" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Gelişmiş Senaryolar</a></li>
+                <li><a href="#common-issues" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Sık Karşılaşılan Sorunlar</a></li>
+                <li><a href="#example-files" class="block py-2 px-4 border-l-4 border-transparent hover:border-teal-500 hover:bg-stone-100 transition-colors">Örnek YAML Dosyaları</a></li>
+            </ul>
+        </nav>
+
+        <main class="w-full md:w-3/4 lg:w-4/5">
+            <div class="space-y-12">
+                <section id="introduction" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Giriş: Tauri ve GitHub Actions ile CI/CD</h2>
+                    <p class="text-slate-600 leading-relaxed mb-4">Tauri, web teknolojileri (HTML, CSS, JavaScript) ve Rust kullanarak modern, güvenli ve platformlar arası masaüstü uygulamaları oluşturmanızı sağlayan bir framework'tür. GitHub Actions ise, yazılım geliştirme iş akışlarınızı otomatikleştirmenize olanak tanıyan bir Sürekli Entegrasyon/Sürekli Dağıtım (CI/CD) platformudur.</p>
+                    <p class="text-slate-600 leading-relaxed mb-6">Bu rehberin amacı, Tauri projeleriniz için GitHub Actions iş akışlarını nasıl kuracağınızı adım adım açıklamaktır. Otomatikleştirme sayesinde, her kod değişikliğinde veya yeni bir sürüm etiketlediğinizde, Windows, macOS ve Linux için kurulum dosyalarınız otomatik olarak oluşturulur ve GitHub Release'inize eklenir.</p>
+
+                    <h3 class="text-xl font-semibold mb-3">Otomatik Derleme Akışı Nasıl Çalışır?</h3>
+                    <p class="text-slate-600 mb-4">Aşağıdaki şema, GitHub Actions ile bir Tauri uygulamasının yayınlanma sürecini özetlemektedir:</p>
+                    <div class="my-6 p-4 border rounded-lg bg-stone-50">
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-4">
+                            <div class="flowchart-node">Kod Değişikliği<br/>(Push/Release)</div>
+                            <div class="flowchart-arrow">→</div>
+                            <div class="flowchart-node">GitHub Actions<br/>Tetiklenir</div>
+                            <div class="flowchart-arrow">→</div>
+                            <div class="flowchart-node">Platforma Özel Derleme<br/>(Win, macOS, Linux)</div>
+                            <div class="flowchart-arrow">→</div>
+                            <div class="flowchart-node">Kurulum Dosyaları<br/>GitHub Release'e Yüklenir</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="basic-setup" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Temel Kurulum: İlk İş Akışınızı Oluşturma</h2>
+                    <p class="text-slate-600 mb-6">Başlamak için projenizin kök dizininde <code class="bg-slate-100 px-2 py-1 rounded text-sm">.github/workflows/</code> adında bir klasör oluşturmanız gerekir. GitHub, bu klasördeki YAML dosyalarını otomatik olarak algılar ve iş akışı olarak çalıştırır.</p>
+
+                    <p class="text-slate-600 mb-4"><code class="bg-slate-100 px-2 py-1 rounded text-sm">.github/workflows/main.yml</code> adında bir dosya oluşturun:</p>
+                    <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm mb-4">
+                        <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                        <pre><code>name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: JavaScript setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: 'App v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false</code></pre>
+                    </div>
+                    <p class="text-slate-600">Bu temel yapılandırma, projenizi üç ana platformda (macOS, Ubuntu, Windows) derler. Herhangi bir derleme hatası olursa, iş akışı başarısız olur ve sizi bilgilendirir.</p>
+                </section>
+
+                <section id="workflow-details" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">İş Akışı Detayları: YAML Dosyasını Anlamak</h2>
+                    <p class="text-slate-600 mb-6">YAML dosyasının her bir bölümünün ne anlama geldiğini inceleyelim:</p>
+
+                    <ul class="list-disc list-inside space-y-3 text-slate-600">
+                        <li><strong class="text-slate-800">name:</strong> İş akışınızın GitHub arayüzünde görünecek adı.</li>
+                        <li><strong class="text-slate-800">on:</strong> İş akışını tetikleyecek olaylar. <code class="bg-slate-100 px-2 py-1 rounded text-sm">[push, pull_request]</code> her kod itildiğinde veya pull request açıldığında çalışır.</li>
+                        <li><strong class="text-slate-800">jobs:</strong> İş akışının gerçekleştireceği işler.</li>
+                        <li><strong class="text-slate-800">strategy.matrix:</strong> İşi farklı yapılandırmalarla birden çok kez çalıştırır.</li>
+                        <li><strong class="text-slate-800">runs-on:</strong> İşin çalışacağı sanal makine türü.</li>
+                        <li><strong class="text-slate-800">steps:</strong> İşin gerçekleştireceği adımların sıralı listesi.</li>
+                        <li><strong class="text-slate-800">uses:</strong> Hazır bir GitHub Action kullanır.</li>
+                        <li><strong class="text-slate-800">run:</strong> Komut satırı komutları çalıştırır.</li>
+                        <li><strong class="text-slate-800">env:</strong> Ortam değişkenlerini ayarlar.</li>
+                    </ul>
+                </section>
+
+                <section id="advanced-scenarios" class="scroll-mt-24">
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-teal-700 mb-4">Gelişmiş Senaryolar ve Özelleştirme</h2>
+                        <p class="text-slate-600 leading-relaxed mb-6">İş akışlarınızı daha güçlü ve esnek hale getirmek için kullanabileceğiniz gelişmiş teknikler.</p>
+                    </div>
+
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8">
+                        <h3 class="text-xl font-semibold mb-3">1. Sadece Release İçin Çalışan İş Akışı</h3>
+                        <p class="text-slate-600 mb-4">En yaygın senaryo, uygulamanızı yalnızca yeni bir release oluşturduğunuzda derlemektir. <code class="bg-slate-100 px-2 py-1 rounded text-sm">on</code> tetikleyicisini değiştirin:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm mb-4">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>on:
+  release:
+    types: [created]</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8">
+                        <h3 class="text-xl font-semibold mb-3">2. Kod İmzalama (Code Signing)</h3>
+                        <p class="text-slate-600 mb-4">Özellikle macOS ve Windows'ta kod imzalama önemlidir:</p>
+                        <ul class="list-disc list-inside space-y-2 text-slate-600 mb-4">
+                            <li><strong>macOS:</strong> Sertifikayı base64 formatında <code class="bg-slate-100 px-2 py-1 rounded text-sm">MACOS_CERTIFICATE</code> olarak GitHub Secrets'a ekleyin.</li>
+                            <li><strong>Windows:</strong> .pfx dosyasını ve şifresini GitHub Secrets'a ekleyin.</li>
+                        </ul>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+  MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8">
+                        <h3 class="text-xl font-semibold mb-3">3. Bağımlılıkları Önbelleğe Alma (Caching)</h3>
+                        <p class="text-slate-600 mb-4">İş akışlarınızı hızlandırmak için bağımlılıkları önbelleğe alın:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>- name: Cache Rust dependencies
+  uses: Swatinem/rust-cache@v2
+
+- name: Cache node modules
+  uses: actions/cache@v4
+  with:
+    path: node_modules
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-node-</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="common-issues" class="bg-white p-6 md:p-8 rounded-lg shadow-sm scroll-mt-24">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">Sık Karşılaşılan Sorunlar ve Çözümleri</h2>
+                    <p class="text-slate-600 mb-6">Tauri için GitHub Actions kurarken karşılaşabileceğiniz yaygın sorunlar:</p>
+
+                    <div class="space-y-4">
+                        <details class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                            <summary class="font-semibold text-slate-800 flex justify-between items-center">
+                                <span>Linux Derlemesi "webkit2gtk" Hatası Veriyor</span>
+                                <span class="arrow text-teal-600">▶</span>
+                            </summary>
+                            <div class="mt-4 text-slate-600">
+                                <strong>Çözüm:</strong> Bu, Tauri'nin Linux'taki web görünümü için ihtiyaç duyduğu sistem kütüphanelerinin eksik olmasından kaynaklanır. İş akışınıza bağımlılıkları kuran adımı ekleyin (Temel Kurulum bölümündeki <code class="bg-slate-100 px-2 py-1 rounded text-sm">Install dependencies</code> adımı).
+                            </div>
+                        </details>
+
+                        <details class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                            <summary class="font-semibold text-slate-800 flex justify-between items-center">
+                                <span>macOS Derlemesi Kod İmzalama Hatası Veriyor</span>
+                                <span class="arrow text-teal-600">▶</span>
+                            </summary>
+                            <div class="mt-4 text-slate-600">
+                                <strong>Çözüm:</strong> macOS, özellikle Apple Silicon için derlenen uygulamaların imzalanmasını zorunlu kılar. Test için <code class="bg-slate-100 px-2 py-1 rounded text-sm">tauri.conf.json</code>'da <code class="bg-slate-100 px-2 py-1 rounded text-sm">bundle.macOS.sign</code> ayarını devre dışı bırakabilirsiniz. Production için Apple Geliştirici sertifikalarınızı GitHub Secrets'a ekleyin.
+                            </div>
+                        </details>
+
+                        <details class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                            <summary class="font-semibold text-slate-800 flex justify-between items-center">
+                                <span>`tauri-action` "Artifact not found" Hatası Veriyor</span>
+                                <span class="arrow text-teal-600">▶</span>
+                            </summary>
+                            <div class="mt-4 text-slate-600">
+                                <strong>Çözüm:</strong> Bu genellikle derleme sürecinin başarısız olduğu anlamına gelir. <code class="bg-slate-100 px-2 py-1 rounded text-sm">tauri-action</code> adımından önceki logları, özellikle <code class="bg-slate-100 px-2 py-1 rounded text-sm">npm run tauri build</code> çıktısını kontrol edin.
+                            </div>
+                        </details>
+
+                        <details class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                            <summary class="font-semibold text-slate-800 flex justify-between items-center">
+                                <span>İş Akışım Çok Yavaş Çalışıyor</span>
+                                <span class="arrow text-teal-600">▶</span>
+                            </summary>
+                            <div class="mt-4 text-slate-600">
+                                <strong>Çözüm:</strong> Özellikle Rust'ın ilk derlemesi uzun sürebilir. "Gelişmiş Senaryolar" bölümünde gösterilen önbellekleme tekniklerini kullanın.
+                            </div>
+                        </details>
+                    </div>
+                </section>
+
+                <section id="example-files" class="scroll-mt-24">
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm">
+                        <h2 class="text-2xl font-bold text-teal-700 mb-4">Örnek YAML Dosyaları</h2>
+                        <p class="text-slate-600 mb-6">Kopyalayıp doğrudan projenizde kullanabileceğiniz tam iş akışı dosyaları:</p>
+                    </div>
+
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8">
+                        <h3 class="text-xl font-semibold mb-3">1. ci.yml (Her Push ve PR için Derleme Testi)</h3>
+                        <p class="text-slate-600 mb-4">Release oluşturmaz, sadece derlemenin başarılı olup olmadığını kontrol eder:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>name: Continuous Integration
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: setup node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: install dependencies (ubuntu only)
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+    - name: install frontend dependencies
+      run: npm install
+
+    - name: build app
+      run: npm run tauri build</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-sm mt-8">
+                        <h3 class="text-xl font-semibold mb-3">2. release.yml (Yeni Sürüm Etiketiyle Yayınlama)</h3>
+                        <p class="text-slate-600 mb-4">Yeni bir release oluşturduğunuzda otomatik derleme yapar:</p>
+                        <div class="code-block bg-slate-900 text-white rounded-md p-4 font-mono text-sm">
+                            <button class="copy-btn" title="Panoya kopyala">Kopyala</button>
+                            <pre><code>name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          body: |
+            Yeni sürüm notları için değişiklik günlüğünü kontrol edin.
+          draft: false
+          prerelease: false
+
+  build-tauri:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.id }}</code></pre>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sections = document.querySelectorAll('main section[id], main div[id]');
+        const navLinks = document.querySelectorAll('#sidebar a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    navLinks.forEach(link => {
+                        link.classList.remove('active-nav');
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active-nav');
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-30% 0px -70% 0px' });
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+
+        const copyButtons = document.querySelectorAll('.copy-btn');
+        copyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const codeBlock = button.parentElement;
+                const code = codeBlock.querySelector('pre code').innerText;
+
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    button.textContent = 'Kopyalandı!';
+                    setTimeout(() => {
+                        button.textContent = 'Kopyala';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Kopyalama başarısız oldu', err);
+                    button.textContent = 'Hata!';
+                }
+                document.body.removeChild(textarea);
+            });
+        });
+    });
+</script>
+</body>
+</html>
